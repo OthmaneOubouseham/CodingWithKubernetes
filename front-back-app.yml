@@ -1,3 +1,40 @@
+# Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back-end-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: back-end
+  template:
+    metadata:
+      labels:
+        app: back-end
+    spec:
+      containers:
+      - name: back-end-container
+        image: efrei/back-end:1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8090
+
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-end-service
+spec:
+  selector:
+    app: back-end
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8090
+  type: ClusterIP
+
+# Frontend Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,51 +53,38 @@ spec:
       - name: front-end-container
         image: efrei/front-end:1
         imagePullPolicy: Always
----
+        ports:
+        - containerPort: 8092
 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: back-end-deployment
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: back-end
-  template:
-    metadata:
-      labels:
-        app: back-end
-    spec:
-      containers:
-        - name: back-end-container
-          image: efrei/back-end:1
-          imagePullPolicy: Always
----
-
+# Frontend Service
 apiVersion: v1
 kind: Service
 metadata:
   name: front-end-service
 spec:
-  ports:
-    - name: http
-      targetPort: 8080
-      port: 80
-  type: NodePort
   selector:
     app: front-end
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: back-end-service
-spec:
   ports:
     - name: http
-      targetPort: 8080
       port: 80
-  type: ClusterIP
-  selector:
-    app: back-end
+      targetPort: 8092
+  type: NodePort
+
+# Ingress Configuration (optional)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: front-end-ingress
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: front-end.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: front-end-service
+                port:
+                  number: 80
